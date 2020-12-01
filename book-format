@@ -1,0 +1,98 @@
+#!/usr/bin/env node
+/*
+ * book-format [path] [disable-colors]
+ *
+ * `path` is the path to the text files of the epub or `OEBPS/Text` by default
+ * `disable-colors` can be any value in order to disable colored output
+ *
+ * `tidy` (https://github.com/htacg/tidy-html5) must be installed.
+*/
+
+const fs = require("fs");
+const { spawnSync } = require("child_process");
+const location = (process.argv[2] && (process.argv[2].endsWith("/") ? process.argv[2] : process.argv[2] + "/")) || "./OEBPS/Text/";
+const enableColors = process.argv[3] ? false : true;
+const colors = {
+    "reset": enableColors ? "\x1b[0m" : "",
+    "bold": enableColors ? "\x1b[1m" : "",
+    "red": enableColors ? "\x1b[31m" : "",
+    "yellow": enableColors ? "\x1b[33m" : "",
+    "cyan": enableColors ? "\x1b[34m" : ""
+};
+
+console.log(`Reading files in '${colors.cyan}${location}${colors.reset}'`);
+
+const files = fs.readdirSync(location);
+
+for(let i of files) {
+    // Skip anything other than files
+    if (!fs.lstatSync(location + i).isFile()) {
+        continue;
+    }
+
+    // Rename invalid files
+    if (!i.endsWith(".xhtml")) {
+        let index = i.lastIndexOf(".");
+        let target = i.substring(0, index === -1 ? i.length : index) + ".xhtml";
+        console.warn(`${colors.bold}${colors.yellow}WARNING${colors.reset}: The file '${colors.cyan}${i}${colors.reset}' has an invalid extension. Moving to '${colors.cyan}${target}${colors.reset}'.`)
+        fs.renameSync(location + i, location + target);
+        i = target;
+    }
+
+    console.log(`Formatting '${colors.cyan}${location + i}${colors.reset}'`);
+    const result = spawnSync("tidy", [
+        // https://api.html-tidy.org/tidy/quickref_next.html
+        "--output-bom", "false",
+        "--output-encoding", "utf8",
+        "--markup", "true",
+        "--quiet", "true",
+        "--show-body-only", "false",
+        "--show-warnings", "true",
+        "--doctype", "omit",
+        "--input-xml", "true",
+        "--output-xml", "true",
+        "--add-meta-charset", "true",
+        "--add-xml-decl", "false",
+        "--warn-proprietary-attributes", "false",
+        "--drop-empty-elements", "true",
+        "--numeric-entities", "true",
+        "--quote-ampersand", "true",
+        "--hide-comments", "false",
+        "--join-classes", "true",
+        "--break-before-br", "true",
+        "--indent", "true",
+        "--indent-spaces", "2",
+        "--sort-attributes", "alpha",
+        "--tidy-mark", "false",
+        "--wrap", "0",
+        location + i // input file
+    ], {
+        stdio: "pipe"
+    });
+
+    if (result.status === 1) {
+        console.warn(`${colors.bold}${colors.yellow}WARNING${colors.reset}: 'tidy' reported warnings:\n`);
+        console.warn(result.stderr.toString());
+    } else if (result.status !== 0) {
+        console.error(`${colors.bold}${colors.red}ERROR${colors.reset}: 'tidy' failed; exit code ${colors.red}${result.status}${colors.reset}`);
+        console.error("stderr:\n");
+        console.error(result.stderr.toString());
+        process.exit(result.status);
+        break;
+    }
+
+    // Place the two doctypes at the beginning
+    // Automatically "fills in" the missing, or both, doctypes
+    let data = result.stdout.toString();
+    const text0 = `<?xml version="1.0" encoding="utf-8"?>\n`;
+    const text1 = `<!DOCTYPE html>\n`;
+    if (data.startsWith(text0 + text1)) {} else if (data.startsWith(text1)) {
+        data = text0 + data;
+    } else if (data.startsWith(text0)) {
+        data = text0 + text1 + data.substring(text0.length);
+    } else {
+        data = text0 + text1 + data;
+    }
+    fs.writeFileSync(location + i,  data);
+
+}
