@@ -96,3 +96,47 @@ for(let i of files) {
     fs.writeFileSync(location + i,  data);
 
 }
+
+console.log(`Formatting '${colors.cyan}${require("path").dirname(location) + "/content.opf"}${colors.reset}'`);
+
+const result = spawnSync("tidy", [
+    "--output-bom", "false",
+    "--output-encoding", "utf8",
+    "--markup", "true",
+    "--quiet", "true",
+    "--show-warnings", "true",
+    "--input-xml", "true",
+    "--output-xml", "true",
+    "--add-xml-decl", "true",
+    "--warn-proprietary-attributes", "false",
+    "--drop-empty-elements", "false",
+    "--hide-comments", "false",
+    "--indent", "true",
+    "--indent-spaces", "2",
+    "--wrap", "0",
+    location + "../content.opf"
+], {
+    stdio: "pipe"
+});
+
+if (result.status === 1) {
+    console.warn(`${colors.bold}${colors.yellow}WARNING${colors.reset}: 'tidy' reported warnings:\n`);
+    console.warn(result.stderr.toString());
+} else if (result.status !== 0) {
+    console.error(`${colors.bold}${colors.red}ERROR${colors.reset}: 'tidy' failed; exit code ${colors.red}${result.status}${colors.reset}`);
+    console.error("stderr:\n");
+    console.error(result.stderr.toString());
+    process.exit(result.status);
+}
+
+// Update the modified meta property
+
+let today = new Date;
+today.setUTCHours(0);
+today.setUTCMinutes(0);
+today.setUTCSeconds(0);
+today.setUTCMilliseconds(0);
+
+let data = result.stdout.toString().replace(/(<meta property="dcterms:modified">)(.*)(<\/meta>)/, "$1" + today.toISOString() + "$3")
+
+fs.writeFileSync(location + "../content.opf",  data);
