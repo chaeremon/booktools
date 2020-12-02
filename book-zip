@@ -1,0 +1,49 @@
+#!/usr/bin/env node
+/*
+ * book-zip [--in INPUT] [--output PATH] [-no-colors]
+ *
+ * `--in` is the path to the epub contents, or `./` by default
+ * `--output` is the path to the output file, or `./out.epub` by default
+ * `-no-colors` can be passed in order to disable colored output
+ *
+ * The `zip` command must be installed.
+*/
+
+const { spawnSync } = require("child_process");
+
+let args = {}, input = [];
+let i, argv;
+while (i = (argv || (argv = process.argv.slice(2))).shift())
+    (i.slice(0, 2) == "--" && (args[(i[1] && i[1] == "-") ? i.slice(2) : i.slice(1)] = argv.shift())) || (i[0] == "-" && (args[i.slice(1)] = true)) || input.push(i);
+const enableColors = !args["no-colors"];
+const colors = {
+    "reset": enableColors ? "\x1b[0m" : "",
+    "bold": enableColors ? "\x1b[1m" : "",
+    "red": enableColors ? "\x1b[31m" : "",
+    "yellow": enableColors ? "\x1b[33m" : "",
+    "cyan": enableColors ? "\x1b[34m" : ""
+};
+
+const outputFile = args["out"] || args["output"] || "./out.epub";
+const inputDir = (args["in"] && (args["in"].endsWith("/") ? args["in"] : args["in"] + "/")) || "./";
+
+console.log(`Creating epub '${colors.cyan}${outputFile}${colors.reset}' from '${colors.cyan}${inputDir}${colors.reset}'`);
+
+const options = {
+    stdio: "inherit",
+    cwd: inputDir
+};
+const zipError = status => {
+    console.error(`${colors.bold}${colors.red}ERROR${colors.reset}: 'zip' failed; exit code ${colors.red}${status}${colors.reset}`);
+    process.exit(status);
+};
+
+var { status } = spawnSync("zip", ["-q", "-0", "-X", outputFile, "mimetype"], options);
+
+if (status !== 0)
+    zipError(status);
+
+var { status } = spawnSync("zip", ["-q", "-9", "-r", outputFile, "toc.ncx", "META-INF", "OEBPS"], options);
+
+if (status !== 0)
+    zipError(status);
