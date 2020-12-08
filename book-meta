@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+/*
+ * book-meta [path] [disable-colors]
+ *
+ * `path` is the path to the epub manifest file `OEBPS/content.opf` by default
+ * `disable-colors` can be any value in order to disable colored output
+ */
+
+const fs = require("fs");
+const readline = require("readline");
+const input = ((process.argv[2] && (process.argv[2].endsWith("/") ? process.argv[2] : process.argv[2] + "/")) || "./") + "OEBPS/content.opf";
+const enableColors = !process.argv[3];
+const colors = {
+    "reset": enableColors ? "\x1b[0m" : "",
+    "bold": enableColors ? "\x1b[1m" : "",
+    "red": enableColors ? "\x1b[31m" : "",
+    "yellow": enableColors ? "\x1b[33m" : "",
+    "cyan": enableColors ? "\x1b[34m" : ""
+};
+
+let data = fs.readFileSync(input, "utf8");
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+console.log(`Editing '${colors.cyan}${input}${colors.reset}'\n`);
+
+rl.on("close", () => {
+    fs.writeFileSync(input, data, "utf8");
+});
+
+function getInput(questions) {
+    const question = questions.shift();
+    const [property, value] = question[1](question[0]);
+    rl.question(`${property}${(value && " [" + value + "]") || ""}: `, input => {
+        input = input.trim();
+        if (input && value) {
+            // New value, element already exists -> replace
+            data = data.replace(question[0], question[2](input));
+            console.log("set newValue")
+        } else if (input && !value) {
+            // New value, element does not exist -> insert
+            data = data.replace(/(<metadata.*?>)(\s*)/, "$1$2" + question[2](input) + "$2");
+            console.log("insert new Value")
+        } // No new value -> do nothing
+
+        questions.length === 0 ? rl.close() : getInput(questions);
+    });
+}
+
+getInput([
+    [
+        /<dc:title>(.*?)<\/dc:title>/,
+        (regex) => {
+            const match = regex.exec(data);
+            return ["Book title", match && match[1]];
+        },
+        v => `<dc:title>${v}</dc:title>`
+    ],
+    [
+        /<dc:creator.*?>(.*?)<\/dc:creator>(\s*)?(<meta.*?property="role".*?<\/meta>)?/,
+        (regex) => {
+            const match = regex.exec(data);
+            return ["Author", match && match[1]];
+        },
+        v => `<dc:creator id="creator">${v}</dc:creator>$2<meta refines="#creator" property="role" scheme="marc:relators">aut</meta>`
+    ],
+    [
+        /<dc:language>(.*?)<\/dc:language>/,
+        (regex) => {
+            const match = regex.exec(data);
+            return ["Language (short code)", match && match[1]];
+        },
+        v => `<dc:language>${v}</dc:language>`
+    ],
+    [
+        /<dc:date>(.*?)<\/dc:date>/,
+        (regex) => {
+            const match = regex.exec(data);
+            return ["Date of the EPUB creation", match && match[1]];
+        },
+        v => `<dc:date>${v}</dc:date>`
+    ],
+    [
+        /<meta property="dcterms:created">(.*?)<\/meta>/,
+        (regex) => {
+            const match = regex.exec(data);
+            return ["Creation date", match && match[1]];
+        },
+        v => `<meta property="dcterms:created">${v}</meta>`
+    ],
+    [
+        /<dc:subject>(.*?)<\/dc:subject>/,
+        (regex) => {
+            const match = regex.exec(data);
+            return ["Tags", match && match[1]];
+        },
+        v => `<dc:subject>${v}</dc:subject>`
+    ],
+    [
+        /<meta property="dcterms:source">(.*?)<\/meta>/,
+        (regex) => {
+            const match = regex.exec(data);
+            return ["Source", match && match[1]];
+        },
+        v => `<meta property="dcterms:source">${v}</meta>`
+    ],
+    [
+        /<dc:description>&lt;div&gt;(.*?)&lt;\/div&gt;<\/dc:description>/,
+        (regex) => {
+            const match = regex.exec(data);
+            return ["Description", "\n" + (match && unescapeHTML(match[1])) + "\n"];
+        },
+        v => `<dc:description>&lt;div&gt;${escapeHTML(v)}&lt;/div&gt;</dc:description>`
+    ],
+]);
+
+function escapeHTML(input) {
+    return input
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function unescapeHTML(input) {
+    return input
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"');
+}
