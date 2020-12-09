@@ -1,24 +1,16 @@
 #!/usr/bin/env node
-/*
- * book-format [path] [disable-colors]
- *
- * `path` is the path to the text files of the epub or `OEBPS/Text` by default
- * `disable-colors` can be any value in order to disable colored output
- *
- * `tidy` (https://github.com/htacg/tidy-html5) must be installed.
-*/
+const { args, input, colors, appendSlash } = require("./argparse.js")(`
+book-format INPUT [--output OUTPUT] [-no-colors]
+
+\`INPUT\` is the path to the epub text files or './EPUB/content/' by default
+\`--output\` is the path to the output directory, or './' by default
+
+The \`tidy\` (https://github.com/htacg/tidy-html5) command must be installed.
+`);
 
 const fs = require("fs");
 const { spawnSync } = require("child_process");
-const location = (process.argv[2] && (process.argv[2].endsWith("/") ? process.argv[2] : process.argv[2] + "/")) || "./OEBPS/Text/";
-const enableColors = process.argv[3] ? false : true;
-const colors = {
-    "reset": enableColors ? "\x1b[0m" : "",
-    "bold": enableColors ? "\x1b[1m" : "",
-    "red": enableColors ? "\x1b[31m" : "",
-    "yellow": enableColors ? "\x1b[33m" : "",
-    "cyan": enableColors ? "\x1b[34m" : ""
-};
+const location = (input[0] && appendSlash(input[0])) || "./EPUB/content/";
 
 console.log(`Reading files in '${colors.cyan}${location}${colors.reset}'`);
 
@@ -97,7 +89,7 @@ for(let i of files) {
 
 }
 
-console.log(`Formatting '${colors.cyan}${require("path").dirname(location) + "/content.opf"}${colors.reset}'`);
+console.log(`Formatting '${colors.cyan}${require("path").dirname(location) + "/package.opf"}${colors.reset}'`);
 
 const result = spawnSync("tidy", [
     "--output-bom", "false",
@@ -114,7 +106,7 @@ const result = spawnSync("tidy", [
     "--indent", "true",
     "--indent-spaces", "2",
     "--wrap", "0",
-    location + "../content.opf"
+    location + "../package.opf"
 ], {
     stdio: "pipe"
 });
@@ -139,4 +131,4 @@ today.setUTCMilliseconds(0);
 
 let data = result.stdout.toString().replace(/(<meta property="dcterms:modified">)(.*)(<\/meta>)/, "$1" + today.toISOString() + "$3")
 
-fs.writeFileSync(location + "../content.opf",  data);
+fs.writeFileSync(location + "../package.opf",  data);

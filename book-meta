@@ -1,33 +1,24 @@
 #!/usr/bin/env node
-/*
- * book-meta [path] [disable-colors]
- *
- * `path` is the path to the epub manifest file `OEBPS/content.opf` by default
- * `disable-colors` can be any value in order to disable colored output
- */
+const { args, input, colors } = require("./argparse.js")(`
+book-meta INPUT [-no-colors]
+
+\`INPUT\` is the path to the epub manifest file or './EPUB/package.opf' by default
+`);
 
 const fs = require("fs");
 const readline = require("readline");
-const input = ((process.argv[2] && (process.argv[2].endsWith("/") ? process.argv[2] : process.argv[2] + "/")) || "./") + "OEBPS/content.opf";
-const enableColors = !process.argv[3];
-const colors = {
-    "reset": enableColors ? "\x1b[0m" : "",
-    "bold": enableColors ? "\x1b[1m" : "",
-    "red": enableColors ? "\x1b[31m" : "",
-    "yellow": enableColors ? "\x1b[33m" : "",
-    "cyan": enableColors ? "\x1b[34m" : ""
-};
+const inputFile = input[0] || "./EPUB/package.opf";
 
-let data = fs.readFileSync(input, "utf8");
+let data = fs.readFileSync(inputFile, "utf8");
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-console.log(`Editing '${colors.cyan}${input}${colors.reset}'\n`);
+console.log(`Editing '${colors.cyan}${inputFile}${colors.reset}'\n`);
 
 rl.on("close", () => {
-    fs.writeFileSync(input, data, "utf8");
+    fs.writeFileSync(inputFile, data, "utf8");
 });
 
 function getInput(questions) {

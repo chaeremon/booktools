@@ -1,30 +1,16 @@
 #!/usr/bin/env node
-/*
- * book-unzip INPUT [--output OUTPUT] [-no-colors]
- *
- * `INPUT` is the path to the epub
- * `--output` is the path to the output directory, or `./` by default
- * `-no-colors` can be passed in order to disable colored output
- *
- * The `unzip` command must be installed.
-*/
+const { args, input, colors, appendSlash } = require("./argparse.js")(`
+book-unzip INPUT [--output OUTPUT] [-no-colors]
+
+\`INPUT\` is the path to the epub
+\`--output\` is the path to the output directory, or './' by default
+
+The \`unzip\` command must be installed.
+`);
 
 const { spawnSync } = require("child_process");
 
-let args = {}, input = [];
-let i, argv;
-while (i = (argv || (argv = process.argv.slice(2))).shift())
-    (i.slice(0, 2) == "--" && (args[(i[1] && i[1] == "-") ? i.slice(2) : i.slice(1)] = argv.shift())) || (i[0] == "-" && (args[i.slice(1)] = true)) || input.push(i);
-const enableColors = !args["no-colors"];
-const colors = {
-    "reset": enableColors ? "\x1b[0m" : "",
-    "bold": enableColors ? "\x1b[1m" : "",
-    "red": enableColors ? "\x1b[31m" : "",
-    "yellow": enableColors ? "\x1b[33m" : "",
-    "cyan": enableColors ? "\x1b[34m" : ""
-};
-
-const outputDir = (args["output"] && (args["output"].endsWith("/") ? args["output"] : args["output"] + "/")) || "./";
+const outputDir = (args["output"] && appendSlash(args["output"])) || "./";
 const inputFile = input[0] || "./out.epub";
 
 console.log(`Extracting epub '${colors.cyan}${inputFile}${colors.reset}' to '${colors.cyan}${outputDir}${colors.reset}'`);
