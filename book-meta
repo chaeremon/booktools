@@ -29,11 +29,9 @@ function getInput(questions) {
         if (input && value) {
             // New value, element already exists -> replace
             data = data.replace(question[0], question[2](input));
-            console.log("set newValue")
         } else if (input && !value) {
             // New value, element does not exist -> insert
             data = data.replace(/(<metadata.*?>)(\s*)/, "$1$2" + question[2](input) + "$2");
-            console.log("insert new Value")
         } // No new value -> do nothing
 
         questions.length === 0 ? rl.close() : getInput(questions);
