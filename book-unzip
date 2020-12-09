@@ -24,7 +24,7 @@ const colors = {
     "cyan": enableColors ? "\x1b[34m" : ""
 };
 
-const outputDir = (args["out"] && (args["out"].endsWith("/") ? args["out"] : args["out"] + "/")) || "./";
+const outputDir = (args["output"] && (args["output"].endsWith("/") ? args["output"] : args["output"] + "/")) || "./";
 const inputFile = input[0] || "./out.epub";
 
 console.log(`Extracting epub '${colors.cyan}${inputFile}${colors.reset}' to '${colors.cyan}${outputDir}${colors.reset}'`);
