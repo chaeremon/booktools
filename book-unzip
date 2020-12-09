@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /*
- * book-unzip --in INPUT [--output OUTPUT] [-no-colors]
+ * book-unzip INPUT [--output OUTPUT] [-no-colors]
  *
- * `--in` is the path to the epub
+ * `INPUT` is the path to the epub
  * `--output` is the path to the output directory, or `./` by default
  * `-no-colors` can be passed in order to disable colored output
  *
@@ -25,7 +25,7 @@ const colors = {
 };
 
 const outputDir = (args["out"] && (args["out"].endsWith("/") ? args["out"] : args["out"] + "/")) || "./";
-const inputFile = args["in"];
+const inputFile = input[0] || "./out.epub";
 
 console.log(`Extracting epub '${colors.cyan}${inputFile}${colors.reset}' to '${colors.cyan}${outputDir}${colors.reset}'`);
 
