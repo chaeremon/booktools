@@ -41,7 +41,7 @@ for(let i of files) {
         "--show-body-only", "false",
         "--show-warnings", "true",
         "--doctype", "omit",
-        "--input-xml", "true",
+        "--input-xml", "false",
         "--output-xml", "true",
         "--add-meta-charset", "true",
         "--add-xml-decl", "false",
